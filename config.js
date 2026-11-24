@@ -3,11 +3,10 @@
  * 团队默认配置（部署静态网页前可在此填写，填写后手机打开即自动生效，也可在网页右上角「设置」中覆盖）
  */
 window.EV_APP_CONFIG = {
-  // 部署完 Google Apps Script 后，将生成的 Web App URL 粘贴到这里
-  // 例如: "https://script.google.com/macros/s/AKfycb.../exec"
-  GAS_WEB_APP_URL: "",
+  // 已自动关联部署好的 Google Apps Script Web App URL
+  GAS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycbxEChwGtkA96DKDC9kEoJoFdx6pRibdFSYhsaO5u6vHRoq_4sX-EsRHrYKn2rc32xHs_Q/exec",
 
-  // 访问口令（与 Google Apps Script 中 ACCESS_PIN 一致；如不设口令留空即可）
+  // 访问口令（为安全起见不在公开代码中写死；如需启用口令，请在 Code.gs 设置后于手机网页右上角「⚙️ 设置」填写）
   ACCESS_PIN: "",
 
   // 第 4 页「36-Hour Supplement Email」默认接收邮箱（如 leasing@burlewgroup.com）
