@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#155b62" />
+  <title>East Village Move-In Pre-Check & Key Handoff</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"
+          onerror="this.onerror=null;this.src='https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js'"></script>
+</head>
+<body>
+  <!-- Sticky App Header -->
+  <header class="app-header">
+    <div class="header-top">
+      <div class="brand">
+        <div class="brand-badge">EV</div>
+        <div class="brand-text">
+          <h1>EAST VILLAGE Move-In Pre-Check</h1>
+          <p>4315 &amp; 4320 Scurry St · Dallas, TX · Burlew Group LLC</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="icon-btn" id="btnResetForm" title="清空当前表单">重置</button>
+        <button type="button" class="icon-btn" id="btnOpenSettings" title="Google Drive 与默认项设置">⚙️ 设置</button>
+      </div>
+    </div>
+    <nav class="step-nav" aria-label="检查步骤">
+      <div class="step-nav-inner" id="stepNav">
+        <button type="button" class="step-tab active" data-step="0">
+          <span class="step-num">1</span> 基本信息
+        </button>
+        <button type="button" class="step-tab" data-step="1">
+          <span class="step-num">2</span> 清洁安防
+        </button>
+        <button type="button" class="step-tab" data-step="2">
+          <span class="step-num">3</span> 14 区域
+        </button>
+        <button type="button" class="step-tab" data-step="3">
+          <span class="step-num">4</span> 照片 <span id="photoNavCount">(0)</span>
+        </button>
+        <button type="button" class="step-tab" data-step="4">
+          <span class="step-num">5</span> 钥匙签名
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container">
+    <!-- ==================== STEP 1: HOME, PRE-CHECK & RESIDENT INFO ==================== -->
+    <section class="step-panel active" data-step="0">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Home, Pre-Check &amp; Resident Information</h2>
+          <span class="card-badge">Page 1</span>
+        </div>
+        <div class="card-body">
+          <div class="grid-2">
+            <div class="field">
+              <label>PROPERTY 物业 <span class="req">*</span></label>
+              <div class="pill-group">
+                <label class="pill-option">
+                  <input type="radio" name="property" value="EV1" />
+                  <span>East Village 1 (4315)</span>
+                </label>
+                <label class="pill-option">
+                  <input type="radio" name="property" value="EV2" />
+                  <span>East Village 2 (4320)</span>
+                </label>
+              </div>
+            </div>
+            <div class="field">
+              <label for="unit">UNIT # 房号 <span class="req">*</span> <span class="sub">自动同步全 6 页</span></label>
+              <input type="text" id="unit" placeholder="例如: 204 / 105B" autocomplete="off" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label>FLOOR PLAN 户型</label>
+            <div class="pill-group">
+              <label class="pill-option">
+                <input type="radio" name="floorPlan" value="2B" />
+                <span>2B</span>
+              </label>
+              <label class="pill-option">
+                <input type="radio" name="floorPlan" value="2B_Office" />
+                <span>2B + Office</span>
+              </label>
+              <label class="pill-option">
+                <input type="radio" name="floorPlan" value="3B" />
+                <span>3B</span>
+              </label>
+              <label class="pill-option">
+                <input type="radio" name="floorPlan" value="Other" />
+                <span>Other</span>
+              </label>
+            </div>
+            <div id="floorPlanOtherWrap" class="hidden" style="margin-top:8px;">
+              <input type="text" id="floorPlanOther" placeholder="请填写其他户型 (Other Floor Plan)" />
+            </div>
+          </div>
+
+          <div class="grid-3">
+            <div class="field">
+              <label for="keyHandoffPicker">MOVE-IN / KEY HANDOFF <span class="sub">交钥匙时间</span></label>
+              <input type="datetime-local" id="keyHandoffPicker" />
+              <input type="text" id="keyHandoffDateTime" placeholder="MM/DD/YYYY hh:mm AM" style="margin-top:6px;font-size:13px;" />
+            </div>
+            <div class="field">
+              <label for="supplementDeadlineDateTime">36-HR SUPPLEMENT DEADLINE <span class="sub">自动 +36 小时</span></label>
+              <input type="text" id="supplementDeadlineDateTime" placeholder="自动根据交房时间计算" />
+            </div>
+            <div class="field">
+              <label for="preCheckInspectorDate">MGMT PRE-CHECK INSPECTOR &amp; DATE <span class="sub">检查员与日期</span></label>
+              <input type="text" id="preCheckInspectorDate" placeholder="例如: Alex Chen · 11/23/2026" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header subtle">
+          <h2 class="card-title">Resident Information 租客信息</h2>
+        </div>
+        <div class="card-body">
+          <div class="grid-3">
+            <div class="field">
+              <label for="resident1FullName">PRIMARY RESIDENT FULL NAME <span class="req">*</span></label>
+              <input type="text" id="resident1FullName" placeholder="主租客全名" />
+            </div>
+            <div class="field">
+              <label for="resident1Phone">PHONE 电话</label>
+              <input type="tel" id="resident1Phone" placeholder="(214) 555-0199" />
+            </div>
+            <div class="field">
+              <label for="designatedEmail">DESIGNATED EMAIL <span class="sub">押金及通知邮箱</span></label>
+              <input type="email" id="designatedEmail" placeholder="resident@email.com" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="otherAdultResidents">OTHER ADULT RESIDENT(S) ON LEASE <span class="sub">其他成年同住租客全名</span></label>
+            <input type="text" id="otherAdultResidents" placeholder="如有其他成年租客，用逗号分隔" />
+          </div>
+        </div>
+      </div>
+
+      <div class="notice-box">
+        <p><strong>Step 1 — Key Handoff Review:</strong> Leaving any resident comment blank means agreement with Management's Pre-Check and attached photos.</p>
+        <p><strong>Step 2 — 36-Hour Supplemental Window:</strong> Resident has 36 hours from key handoff to email the 36-Hour Supplemental Exception Form with wide + close-up photos.</p>
+        <p><strong>Not a Repair Request:</strong> Records condition only. Submit repair requests via RentCafe.</p>
+      </div>
+    </section>
+
+    <!-- ==================== STEP 2: CLEANLINESS & SECURITY ==================== -->
+    <section class="step-panel" data-step="1">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">1 · Cleanliness, Odor &amp; General Condition</h2>
+          <button type="button" class="mini-btn" id="btnAllCleanOk" style="background:#fff;border-color:#fff;">全部设为 OK</button>
+        </div>
+        <div class="card-body" id="cleanlinessContainer"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">2 · Smoke Alarms &amp; Security Devices</h2>
+          <button type="button" class="mini-btn" id="btnAllSecWorking" style="background:#fff;border-color:#fff;">全部设为 Working</button>
+        </div>
+        <div class="card-body" id="securityContainer"></div>
+      </div>
+    </section>
+
+    <!-- ==================== STEP 3: ROOM-BY-ROOM AREAS 01-14 ==================== -->
+    <section class="step-panel" data-step="2">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Room-by-Room Pre-Check (Areas 01–14)</h2>
+          <span class="card-badge">Pages 2–3</span>
+        </div>
+        <div class="card-body">
+          <div class="toolbar-row">
+            <span class="status-summary" id="areasSummary">已填 0 / 14 区域</span>
+            <div class="toolbar-btns">
+              <button type="button" class="mini-btn" id="btnFillRemainingOk">未填项一键设为 OK</button>
+              <button type="button" class="mini-btn ghost" id="btnMark2BNA" title="将 09 Bedroom 3 / Office 标为 NA">2B 标无3卧</button>
+            </div>
+          </div>
+          <div id="areasContainer"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== STEP 4: ON-SITE PHOTOS (PAGES 5-6) ==================== -->
+    <section class="step-panel" data-step="3">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Landlord Pre-Move-In Photo Appendix</h2>
+          <span class="card-badge" id="photoHeaderBadge">0 / 12 张 · Pages 5–6</span>
+        </div>
+        <div class="card-body">
+          <div class="grid-2" style="margin-bottom:14px;">
+            <div class="field">
+              <label for="photosTakenDate">PHOTOS TAKEN DATE 拍摄日期</label>
+              <input type="text" id="photosTakenDate" placeholder="MM/DD/YYYY" />
+            </div>
+            <div class="field">
+              <label for="photosTakenBy">TAKEN BY (STAFF NAME) 拍摄人</label>
+              <input type="text" id="photosTakenBy" placeholder="管理员姓名" />
+            </div>
+          </div>
+
+          <div class="photo-upload-bar">
+            <button type="button" class="camera-btn primary" id="btnTakePhoto">
+              <span>📷 手机现场拍照</span>
+              <small>自动压缩并填入下一个空位</small>
+            </button>
+            <button type="button" class="camera-btn" id="btnPickGallery">
+              <span>🖼️ 从相册批量选图</span>
+              <small>一次可多选（最多 12 张）</small>
+            </button>
+          </div>
+
+          <!-- Hidden File Inputs -->
+          <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" />
+          <input type="file" id="galleryInput" accept="image/*" multiple class="hidden" />
+          <input type="file" id="slotFileInput" accept="image/*" capture="environment" class="hidden" />
+
+          <div class="photo-grid" id="photoGrid"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== STEP 5: KEYS, NOTES & SIGNATURES ==================== -->
+    <section class="step-panel" data-step="4">
+      <!-- Section 3: Keys -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">3 · Keys, Remotes &amp; Access Devices</h2>
+          <span class="card-badge">Page 4</span>
+        </div>
+        <div class="card-body" id="keysContainer"></div>
+      </div>
+
+      <!-- Section 4: Notes & 36-Hr Email -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">4 · Additional Notes &amp; 36-Hour Supplement</h2>
+        </div>
+        <div class="card-body">
+          <div class="field">
+            <label for="handoffAdditionalNotes">ADDITIONAL NOTES AT KEY HANDOFF <span class="sub">可选备注</span></label>
+            <textarea id="handoffAdditionalNotes" placeholder="交钥匙时的其他补充说明（可留空）"></textarea>
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label for="submissionEmail">SUBMIT SUPPLEMENT + PHOTOS BY EMAIL TO:</label>
+              <input type="email" id="submissionEmail" placeholder="leasing@burlewgroup.com" />
+            </div>
+            <div class="field">
+              <label for="totalMgmtPhotosDisplay">TOTAL MGMT PRE-MOVE-IN PHOTOS ATTACHED:</label>
+              <input type="text" id="totalMgmtPhotosDisplay" readonly value="0" style="background:var(--slate-100);font-weight:700;" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 5: Electronic Signatures -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">5 · Key Handoff Acknowledgment &amp; Electronic Signature</h2>
+        </div>
+        <div class="card-body">
+          <ul class="legal-bullets">
+            <li><strong>Agreed baseline &amp; 36-hour window:</strong> I have reviewed Management's Pre-Check (Pages 1–3) and attached pre-move-in photos (Pages 5–6). Leaving an item blank means I agree with Management's Pre-Check and attached photos; any additional pre-existing issues must be submitted within 36 hours.</li>
+            <li><strong>Not a repair request:</strong> This packet records condition only and is not a repair request — submit repairs through RentCafe.</li>
+            <li><strong>Return condition:</strong> Unit is expected to be returned in the same condition, normal wear and tear excepted.</li>
+            <li><strong>All residents:</strong> Signature by any adult resident is made on behalf of all residents on the lease.</li>
+          </ul>
+
+          <label class="consent-box">
+            <input type="checkbox" id="eSignConsent" />
+            <span>I agree to sign this packet electronically and designate my Page 1 email for notices, including security deposit notices. <span class="req">*</span></span>
+          </label>
+
+          <div class="field" style="max-width:260px;margin-bottom:16px;">
+            <label for="residentInitials">RESIDENT INITIALS (Pages 1–6) <span class="sub">自动填满 6 页页脚</span></label>
+            <input type="text" id="residentInitials" placeholder="例如: JD" maxlength="8" style="text-transform:uppercase;font-weight:700;" />
+          </div>
+
+          <!-- Resident 1 -->
+          <div class="sig-card" data-sig="Res1">
+            <div class="sig-header">
+              <strong>Resident 1 (主租客)</strong>
+              <div class="sig-mode-toggle">
+                <button type="button" class="active" data-sig-mode="draw">手写签名</button>
+                <button type="button" data-sig-mode="type">打字签名</button>
+              </div>
+            </div>
+            <div class="grid-2" style="margin-bottom:10px;">
+              <div class="field">
+                <label>PRINTED NAME</label>
+                <input type="text" id="res1PrintedName" placeholder="自动同步主租客姓名" />
+              </div>
+              <div class="field">
+                <label>DATE</label>
+                <input type="text" id="res1Date" placeholder="MM/DD/YYYY" />
+              </div>
+            </div>
+            <div class="sig-draw-area">
+              <div class="sig-canvas-wrap">
+                <canvas class="sig-canvas" id="canvasRes1"></canvas>
+                <div class="sig-hint" id="hintRes1">请在此手写签名 / Sign here</div>
+              </div>
+              <div class="sig-actions">
+                <button type="button" class="mini-btn ghost" data-clear-sig="Res1">清除重写</button>
+              </div>
+            </div>
+            <div class="sig-type-area hidden">
+              <input type="text" id="typedRes1" placeholder="Type full name as electronic signature" />
+            </div>
+          </div>
+
+          <!-- Resident 2 (Collapsible / Optional) -->
+          <div class="sig-card" data-sig="Res2">
+            <div class="sig-header">
+              <strong>Resident 2 (可选 · 如有多名租客)</strong>
+              <div class="sig-mode-toggle">
+                <button type="button" class="active" data-sig-mode="draw">手写签名</button>
+                <button type="button" data-sig-mode="type">打字签名</button>
+              </div>
+            </div>
+            <div class="grid-2" style="margin-bottom:10px;">
+              <div class="field">
+                <label>PRINTED NAME</label>
+                <input type="text" id="res2PrintedName" placeholder="第二位租客姓名（可留空）" />
+              </div>
+              <div class="field">
+                <label>DATE</label>
+                <input type="text" id="res2Date" placeholder="MM/DD/YYYY" />
+              </div>
+            </div>
+            <div class="sig-draw-area">
+              <div class="sig-canvas-wrap">
+                <canvas class="sig-canvas" id="canvasRes2"></canvas>
+                <div class="sig-hint" id="hintRes2">请在此手写签名 / Sign here</div>
+              </div>
+              <div class="sig-actions">
+                <button type="button" class="mini-btn ghost" data-clear-sig="Res2">清除重写</button>
+              </div>
+            </div>
+            <div class="sig-type-area hidden">
+              <input type="text" id="typedRes2" placeholder="Type full name as electronic signature" />
+            </div>
+          </div>
+
+          <!-- Resident 3 (Optional toggle) -->
+          <div style="margin-bottom:12px;">
+            <button type="button" class="mini-btn ghost" id="btnToggleRes3">+ 添加 Resident 3 签名栏</button>
+          </div>
+          <div class="sig-card hidden" id="cardRes3" data-sig="Res3">
+            <div class="sig-header">
+              <strong>Resident 3 (if applicable)</strong>
+              <div class="sig-mode-toggle">
+                <button type="button" class="active" data-sig-mode="draw">手写签名</button>
+                <button type="button" data-sig-mode="type">打字签名</button>
+              </div>
+            </div>
+            <div class="grid-2" style="margin-bottom:10px;">
+              <div class="field">
+                <label>PRINTED NAME</label>
+                <input type="text" id="res3PrintedName" placeholder="第三位租客姓名" />
+              </div>
+              <div class="field">
+                <label>DATE</label>
+                <input type="text" id="res3Date" placeholder="MM/DD/YYYY" />
+              </div>
+            </div>
+            <div class="sig-draw-area">
+              <div class="sig-canvas-wrap">
+                <canvas class="sig-canvas" id="canvasRes3"></canvas>
+                <div class="sig-hint" id="hintRes3">请在此手写签名 / Sign here</div>
+              </div>
+              <div class="sig-actions">
+                <button type="button" class="mini-btn ghost" data-clear-sig="Res3">清除重写</button>
+              </div>
+            </div>
+            <div class="sig-type-area hidden">
+              <input type="text" id="typedRes3" placeholder="Type full name as electronic signature" />
+            </div>
+          </div>
+
+          <!-- Management Sign-Off -->
+          <div class="sig-card" data-sig="Mgmt" style="border-color:var(--teal-700);background:var(--teal-50);">
+            <div class="sig-header">
+              <strong>MANAGEMENT KEY HANDOFF SIGN-OFF · RECEIPT ONLY</strong>
+              <div class="sig-mode-toggle">
+                <button type="button" class="active" data-sig-mode="draw">手写签名</button>
+                <button type="button" data-sig-mode="type">打字签名</button>
+              </div>
+            </div>
+            <div class="grid-3" style="margin-bottom:10px;">
+              <div class="field">
+                <label>STAFF NAME</label>
+                <input type="text" id="mgmtStaffName" placeholder="管理员姓名" />
+              </div>
+              <div class="field">
+                <label>DATE &amp; TIME</label>
+                <input type="text" id="mgmtDateTime" placeholder="MM/DD/YYYY hh:mm AM" />
+              </div>
+              <div class="field">
+                <label>PRE-HANDOFF PHOTO SET REF #</label>
+                <input type="text" id="mgmtPhotoSetRef" placeholder="自动生成编号" />
+              </div>
+            </div>
+            <div class="sig-draw-area">
+              <div class="sig-canvas-wrap">
+                <canvas class="sig-canvas" id="canvasMgmt"></canvas>
+                <div class="sig-hint" id="hintMgmt">管理员手写签名 / Staff signature</div>
+              </div>
+              <div class="sig-actions">
+                <button type="button" class="mini-btn ghost" data-clear-sig="Mgmt">清除重写</button>
+              </div>
+            </div>
+            <div class="sig-type-area hidden">
+              <input type="text" id="typedMgmt" placeholder="Type staff name as signature" />
+            </div>
+          </div>
+
+          <!-- Final Submit Actions -->
+          <div class="submit-actions">
+            <button type="button" class="btn btn-secondary" id="btnPreviewPdf">
+              📄 生成并预览/下载 PDF
+            </button>
+            <button type="button" class="btn btn-success" id="btnSubmitDrive">
+              ☁️ 提交并存入 Google Drive
+            </button>
+          </div>
+
+          <div id="submitResultArea"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Fixed Bottom Stepper Bar -->
+  <footer class="bottom-bar">
+    <div class="bottom-bar-inner">
+      <button type="button" class="btn btn-secondary" id="btnPrevStep">← 上一步</button>
+      <button type="button" class="btn btn-primary" id="btnNextStep">下一步 →</button>
+    </div>
+  </footer>
+
+  <!-- Settings Modal -->
+  <div class="modal-backdrop" id="settingsModal">
+    <div class="modal">
+      <div class="modal-head">
+        <h3>⚙️ Google Drive 与默认设置</h3>
+        <button type="button" class="mini-btn ghost" id="btnCloseSettings">关闭</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label for="cfgGasUrl">Google Apps Script Web App URL</label>
+          <input type="text" id="cfgGasUrl" placeholder="https://script.google.com/macros/s/.../exec" />
+        </div>
+        <div class="field">
+          <label for="cfgPin">访问口令 Access PIN <span class="sub">需与脚本中一致，未设则留空</span></label>
+          <input type="password" id="cfgPin" placeholder="例如: 4315" />
+        </div>
+        <div class="field">
+          <label for="cfgEmail">默认 36-Hr Supplement 接收邮箱</label>
+          <input type="email" id="cfgEmail" placeholder="leasing@burlewgroup.com" />
+        </div>
+        <div class="field">
+          <label for="cfgStaffName">默认检查员 / 管理员姓名</label>
+          <input type="text" id="cfgStaffName" placeholder="例如: Alex Chen" />
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button type="button" class="mini-btn" id="btnTestGas">测试 Google Drive 连接</button>
+          <span id="gasTestStatus" style="font-size:12.5px;color:var(--slate-500);"></span>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-secondary" id="btnCancelSettings">取消</button>
+        <button type="button" class="btn btn-primary" id="btnSaveSettings" style="flex:0;">保存设置</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress Modal -->
+  <div class="modal-backdrop" id="loadingModal">
+    <div class="modal" style="max-width:360px;">
+      <div class="modal-body">
+        <div class="overlay-box">
+          <div class="spinner"></div>
+          <div id="loadingText" style="font-weight:700;color:var(--teal-900);">正在生成 6 页原版 PDF...</div>
+          <div id="loadingSub" style="font-size:12.5px;color:var(--slate-500);margin-top:4px;">请保持页面开启，不要切换应用</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="./config.js"></script>
+  <script src="./pdf-filler.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
