@@ -1,6 +1,6 @@
 /**
- * East Village Move-In Pre-Check PDF Filler (Browser + Node compatible)
- * 使用 pdf-lib 直接在浏览器端回填原版 6 页 AcroForm PDF，嵌入现场照片与手写签名，并压平归档。
+ * East Village Move-In Pre-Check PDF Filler (New 5-Page Template)
+ * 使用 pdf-lib 在浏览器端回填新版 5 页 AcroForm PDF，嵌入现场照片与手写签名，并压平归档。
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
@@ -10,27 +10,28 @@
   }
 }(typeof self !== 'undefined' ? self : this, function (PDFLib) {
   const PHOTO_SLOTS = [
-    // Page 5 (index 4)
-    { num: 1, pageIndex: 4, rect: [41, 487, 298, 634] },
-    { num: 2, pageIndex: 4, rect: [314, 487, 571, 634] },
-    { num: 3, pageIndex: 4, rect: [41, 287, 298, 434] },
-    { num: 4, pageIndex: 4, rect: [314, 287, 571, 434] },
-    { num: 5, pageIndex: 4, rect: [41, 87, 298, 234] },
-    { num: 6, pageIndex: 4, rect: [314, 87, 571, 234] },
-    // Page 6 (index 5)
-    { num: 7, pageIndex: 5, rect: [41, 487, 298, 634] },
-    { num: 8, pageIndex: 5, rect: [314, 487, 571, 634] },
-    { num: 9, pageIndex: 5, rect: [41, 287, 298, 434] },
-    { num: 10, pageIndex: 5, rect: [314, 287, 571, 434] },
-    { num: 11, pageIndex: 5, rect: [41, 87, 298, 234] },
-    { num: 12, pageIndex: 5, rect: [314, 87, 571, 234] }
+    // Page 3 (index 2) — Photo Appendix Part 1 of 2
+    { num: 1, pageIndex: 2, rect: [41, 487, 298, 634] },
+    { num: 2, pageIndex: 2, rect: [314, 487, 571, 634] },
+    { num: 3, pageIndex: 2, rect: [41, 287, 298, 434] },
+    { num: 4, pageIndex: 2, rect: [314, 287, 571, 434] },
+    { num: 5, pageIndex: 2, rect: [41, 87, 298, 234] },
+    { num: 6, pageIndex: 2, rect: [314, 87, 571, 234] },
+    // Page 4 (index 3) — Photo Appendix Part 2 of 2
+    { num: 7, pageIndex: 3, rect: [41, 487, 298, 634] },
+    { num: 8, pageIndex: 3, rect: [314, 487, 571, 634] },
+    { num: 9, pageIndex: 3, rect: [41, 287, 298, 434] },
+    { num: 10, pageIndex: 3, rect: [314, 287, 571, 434] },
+    { num: 11, pageIndex: 3, rect: [41, 87, 298, 234] },
+    { num: 12, pageIndex: 3, rect: [314, 87, 571, 234] }
   ];
 
+  // Page 5 (index 4) — Key Handoff Acknowledgment & Signature
   const SIGNATURE_RECTS = {
-    Res1_Signature: { pageIndex: 3, rect: [292, 180.89, 474, 198.89] },
-    Res2_Signature: { pageIndex: 3, rect: [292, 157.89, 474, 175.89] },
-    Res3_Signature: { pageIndex: 3, rect: [292, 134.89, 474, 152.89] },
-    Mgmt_Signature: { pageIndex: 3, rect: [179.5, 65.39, 302, 79.39] }
+    Res1_Signature: { pageIndex: 4, rect: [292, 535.8, 474, 553.8] },
+    Res2_Signature: { pageIndex: 4, rect: [292, 512.8, 474, 530.8] },
+    Res3_Signature: { pageIndex: 4, rect: [292, 489.8, 474, 507.8] },
+    Mgmt_Signature: { pageIndex: 4, rect: [179.5, 412.3, 302, 426.3] }
   };
 
   function normalizeText(str) {
@@ -64,9 +65,6 @@
     return Uint8Array.from(Buffer.from(base64, 'base64'));
   }
 
-  /**
-   * 当用户输入中文等非 WinAnsi 字符时，通过浏览器 Canvas 渲染为高清晰透明 PNG 贴入原字段框，避免 pdf-lib 报错
-   */
   function renderUnicodeTextToPng(text, widthPt, heightPt, isMultiline) {
     if (typeof document === 'undefined') return null;
     const scale = 3;
@@ -134,12 +132,6 @@
     };
   }
 
-  /**
-   * 填充模板 PDF 并返回 Uint8Array
-   * @param {ArrayBuffer|Uint8Array} templateBytes
-   * @param {Object} data 表单数据
-   * @returns {Promise<Uint8Array>}
-   */
   async function fillMoveInPdf(templateBytes, data) {
     const { PDFDocument, StandardFonts, rgb } = PDFLib;
     const pdfDoc = await PDFDocument.load(templateBytes);
@@ -154,7 +146,7 @@
       try {
         const tf = form.getTextField(fieldName);
         if (isWinAnsiSafe(str)) {
-          let size = fontSize !== null ? fontSize : (isMultiline ? 9 : 9.5);
+          let size = fontSize !== null ? fontSize : (isMultiline ? 8.8 : 9.5);
           if (!isMultiline) {
             const info = getFieldRectAndPage(pdfDoc, tf);
             if (info) {
@@ -190,8 +182,7 @@
     function setRadio(fieldName, optionValue) {
       if (!optionValue) return;
       try {
-        const rg = form.getRadioGroup(fieldName);
-        rg.select(optionValue);
+        form.getRadioGroup(fieldName).select(optionValue);
       } catch (e) {
         console.warn('Skip radio field:', fieldName, optionValue, e.message);
       }
@@ -207,15 +198,15 @@
       }
     }
 
-    // 1. Unit header synced across all 6 pages
+    // 1. Unit header synced across all 5 pages
     const unit = normalizeText(data.unit);
-    for (let p = 1; p <= 6; p++) {
+    for (let p = 1; p <= 5; p++) {
       setText(`Hdr_Unit_P${p}`, unit, false, 11);
     }
 
-    // 2. Resident initials synced across all 6 pages
+    // 2. Resident initials synced across all 5 pages
     const initials = normalizeText(data.residentInitials);
-    for (let p = 1; p <= 6; p++) {
+    for (let p = 1; p <= 5; p++) {
       setText(`P${p}_Initials`, initials, false, 10);
     }
 
@@ -233,7 +224,7 @@
     setText('Designated_Email', data.designatedEmail);
     setText('Other_Adult_Residents', data.otherAdultResidents);
 
-    // 4. Section 1: Cleanliness, Odor & General Condition (4 items)
+    // 4. Page 1 Section 1: Cleanliness, Odor & General Condition (4 items)
     for (let i = 1; i <= 4; i++) {
       const item = (data.cleanliness && data.cleanliness[`C${i}`]) || {};
       setRadio(`PC_C${i}`, item.status);
@@ -241,39 +232,44 @@
       setText(`C${i}_Resident_Comments`, item.residentComments);
     }
 
-    // 5. Section 2: Smoke Alarms & Security Devices (5 items)
+    // 5. Page 1 Section 2: Smoke Alarms & Security Devices (5 items)
     for (let i = 1; i <= 5; i++) {
       const item = (data.security && data.security[`S${i}`]) || {};
       setRadio(`S${i}_Status`, item.status);
       setText(`S${i}_Date_Note`, item.dateNote);
     }
 
-    // 6. Pages 2-3: Room-by-Room Areas 01-14
-    for (let i = 1; i <= 14; i++) {
-      const num = String(i).padStart(2, '0');
-      const area = (data.areas && data.areas[num]) || {};
-      setRadio(`PC${num}`, area.status);
-      setText(`PC${num}_Note`, area.mgmtNote, true);
-      setText(`RC${num}_Resident_Comments`, area.residentComments, true);
-    }
-
-    // 7. Page 4: Keys, Remotes & Access Devices
+    // 6. Page 2 Section 3: Keys, Remotes & Access Devices
     for (let i = 1; i <= 3; i++) {
       const k = (data.keys && data.keys[`K${i}`]) || {};
       setText(`K${i}_Qty_Issued`, k.qty);
       setText(`K${i}_Notes`, k.notes);
     }
 
-    // 8. Page 4: Additional Notes & Supplement Email
-    setText('Handoff_Additional_Notes', data.handoffAdditionalNotes, true);
+    // 7. Page 2 Section 4: Additional Notes & Supplement Email
+    setText('Handoff_Additional_Notes', data.handoffAdditionalNotes, true, 8.8);
     setText('Submission_Email', data.submissionEmail);
 
     const photos = Array.isArray(data.photos) ? data.photos : [];
     const attachedPhotoCount = photos.filter((p) => p && p.dataUrl).length;
     setText('Total_Mgmt_Photos', String(attachedPhotoCount));
 
-    // 9. Page 4: Acknowledgment & Signatures
-    setCheckbox('ESign_Notice_Consent', !!data.eSignConsent);
+    // 8. Pages 3-4: Photo Metadata Fields
+    setText('Photos_Taken_Date_P3', data.photosTakenDate, false, 8.5);
+    setText('Photos_Taken_By_P3', data.photosTakenBy, false, 8.5);
+    setText('Photos_Taken_Date_P4', data.photosTakenDate, false, 8.5);
+    setText('Photos_Taken_By_P4', data.photosTakenBy, false, 8.5);
+
+    for (let i = 0; i < 12; i++) {
+      const p = photos[i];
+      if (!p) continue;
+      const num = String(i + 1).padStart(2, '0');
+      setText(`Photo_${num}_Area`, p.area, false, 8);
+      setText(`Photo_${num}_Caption`, p.caption, false, 8);
+    }
+
+    // 9. Page 5 Section 5: Acknowledgment & Signatures
+    setCheckbox('Notice_Email_Designation', !!data.noticeEmailDesignation);
 
     const sigs = data.signatures || {};
     const sigImagesToDraw = [];
@@ -305,24 +301,10 @@
       setText('Mgmt_Signature', mgmtSig.typedName, false, 8.5);
     }
 
-    // 10. Pages 5-6: Photo Metadata Fields
-    setText('Photos_Taken_Date_P5', data.photosTakenDate, false, 8.5);
-    setText('Photos_Taken_By_P5', data.photosTakenBy, false, 8.5);
-    setText('Photos_Taken_Date_P6', data.photosTakenDate, false, 8.5);
-    setText('Photos_Taken_By_P6', data.photosTakenBy, false, 8.5);
-
-    for (let i = 0; i < 12; i++) {
-      const p = photos[i];
-      if (!p) continue;
-      const num = String(i + 1).padStart(2, '0');
-      setText(`Photo_${num}_Area`, p.area, false, 8);
-      setText(`Photo_${num}_Caption`, p.caption, false, 8);
-    }
-
-    // 11. Flatten AcroForm so all viewers (Google Drive, iOS Safari, Acrobat) render fields & radios identically
+    // 10. Flatten AcroForm so all viewers render fields identically
     form.flatten();
 
-    // 12. Draw Unicode text overlays (if any non-Latin text was typed in notes)
+    // 11. Draw Unicode text overlays (if any non-Latin text was typed in notes)
     for (const ov of unicodeOverlays) {
       const [x0, y0, x1, y1] = ov.rect;
       const w = x1 - x0;
@@ -333,7 +315,7 @@
       pages[ov.pageIndex].drawImage(img, { x: x0, y: y0, width: w, height: h });
     }
 
-    // 13. Draw Hand-Drawn Signatures cleanly inside exact signature boxes
+    // 12. Draw Hand-Drawn Signatures cleanly inside Page 5 signature boxes
     for (const sig of sigImagesToDraw) {
       try {
         const pngBytes = dataUrlToBytes(sig.dataUrl);
@@ -357,7 +339,7 @@
       }
     }
 
-    // 14. Draw Attached Photos into Pages 5-6 (covering placeholder camera icon cleanly)
+    // 13. Draw Attached Photos into Pages 3-4 (covering placeholder camera icon cleanly)
     for (let i = 0; i < 12; i++) {
       const p = photos[i];
       if (!p || !p.dataUrl) continue;
@@ -367,7 +349,6 @@
       const frameW = x1 - x0;
       const frameH = y1 - y0;
 
-      // Paint solid clean background to cover the template's "Click to insert photo" text & icon
       page.drawRectangle({
         x: x0 + 0.5,
         y: y0 + 0.5,

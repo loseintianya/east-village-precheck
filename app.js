@@ -1,9 +1,10 @@
 /**
- * East Village Move-In Pre-Check & Key Handoff Web App Controller
+ * East Village Move-In Pre-Check & Key Handoff Web App Controller (New 5-Page Template · 4 Steps)
  */
 (function () {
   const STORAGE_SETTINGS_KEY = 'ev_movein_settings_v1';
-  const STORAGE_DRAFT_KEY = 'ev_movein_draft_v1';
+  const STORAGE_DRAFT_KEY = 'ev_movein_draft_v2';
+  const MAX_STEP = 3;
 
   const CLEANLINESS_ITEMS = [
     { id: 'C1', title: 'Professionally cleaned / move-in ready', cn: '专业清洁完成，达到入住标准' },
@@ -20,23 +21,6 @@
     { id: 'S5', title: 'Window latches & sliding glass door pin lock/bar', sub: 'if present · 窗锁与推拉门安全插销', hasNA: true }
   ];
 
-  const ROOM_AREAS = [
-    { num: '01', name: 'Entry & stairs', desc: 'Front door, smart lock, trim, walls, railings, steps' },
-    { num: '02', name: 'Living & dining', desc: 'Walls/paint/nail & TV-mount holes, flooring/scratches, windows, blinds/screens, outlets/lights' },
-    { num: '03', name: 'Kitchen surfaces', desc: 'Countertops (chips/burns), cabinets/drawers, sink, faucet, garbage disposal' },
-    { num: '04', name: 'Kitchen appliances', desc: 'Fridge (shelves/bins/ice maker), range/oven (racks/pans), microwave (turntable), dishwasher (racks), hood filter' },
-    { num: '05', name: 'Bedroom 1', desc: 'Walls/paint/holes, flooring/carpet, closet/rods, windows, blinds/screens, door' },
-    { num: '06', name: 'Bathroom 1', desc: 'Toilet, vanity/sink/mirror, tub/shower, caulking/grout, fixtures, exhaust fan' },
-    { num: '07', name: 'Bedroom 2', desc: 'Walls/paint/holes, flooring/carpet, closet/rods, windows, blinds/screens, door' },
-    { num: '08', name: 'Bathroom 2', desc: 'Toilet, vanity/sink/mirror, tub/shower, caulking/grout, fixtures, exhaust fan' },
-    { num: '09', name: 'Bedroom 3 / office', desc: 'Walls/paint/holes, flooring/carpet, closet/rods, windows, blinds/screens, door' },
-    { num: '10', name: 'Other bath / half bath', desc: 'Toilet, vanity/sink/mirror, fixtures, tub/shower (if present), exhaust fan' },
-    { num: '11', name: 'Loft / flex space', desc: 'Walls/paint, flooring, windows/blinds, railings, lighting' },
-    { num: '12', name: 'Laundry & HVAC', desc: 'Washer, dryer, connections, thermostat, heating/cooling, HVAC filter' },
-    { num: '13', name: 'Garage & rooftop', desc: 'Garage door/opener, floor/surfaces, exterior doors, rooftop deck/railings' },
-    { num: '14', name: 'Safety & other', desc: 'Leaks, odors, patio/balcony, exterior/other concerns' }
-  ];
-
   const KEY_ITEMS = [
     { id: 'K1', label: 'Physical unit key(s)', cn: '入户实体钥匙', defaultQty: '2' },
     { id: 'K2', label: 'Mailbox key(s)', cn: '信箱钥匙', defaultQty: '1' },
@@ -45,27 +29,35 @@
 
   const AREA_OPTIONS = [
     '',
-    ...ROOM_AREAS.map((a) => `${a.num} ${a.name}`),
-    'General / Exterior',
-    'Keys & Smart Lock'
+    'Entry & stairs',
+    'Living & dining',
+    'Kitchen surfaces',
+    'Kitchen appliances',
+    'Bedroom 1',
+    'Bathroom 1',
+    'Bedroom 2',
+    'Bathroom 2',
+    'Bedroom 3 / office',
+    'Half bath',
+    'Loft / flex space',
+    'Laundry & HVAC',
+    'Garage & rooftop',
+    'Balcony / exterior',
+    'Keys & smart lock'
   ];
 
   let currentStep = 0;
   let templatePdfCache = null;
   let pendingPhotoTargetSlot = null;
-  let pendingPhotoPresetArea = '';
 
-  // 12 photo slots in memory
   const photos = Array.from({ length: 12 }, () => ({
     dataUrl: '',
     area: '',
     caption: ''
   }));
 
-  // Signature pad controllers
   const sigPads = {};
 
-  // ==================== Utilities ====================
   function $(id) {
     return document.getElementById(id);
   }
@@ -179,8 +171,8 @@
             <input type="text" id="${item.id}_Mgmt_Note" placeholder="可留空" />
           </div>
           <div class="field">
-            <label>RESIDENT COMMENTS / EXCEPTIONS <span class="sub">留空 = 同意</span></label>
-            <input type="text" id="${item.id}_Resident_Comments" placeholder="Leave blank if agreed" />
+            <label>RESIDENT COMMENTS (IF ANY) <span class="sub">交房时可选备注</span></label>
+            <input type="text" id="${item.id}_Resident_Comments" placeholder="Optional note at key handoff" />
           </div>
         </div>
       </div>
@@ -221,52 +213,6 @@
     `).join('');
   }
 
-  function renderAreasSection() {
-    const wrap = $('areasContainer');
-    wrap.innerHTML = ROOM_AREAS.map((area) => `
-      <div class="check-item" data-area-card="${area.num}">
-        <div class="check-item-head">
-          <div>
-            <div class="check-item-title">
-              <span class="area-num-badge">${area.num}</span>${area.name}
-            </div>
-            <div class="check-item-desc">${area.desc}</div>
-          </div>
-          <div class="pill-group" style="min-width:225px;">
-            <label class="pill-option tone-ok">
-              <input type="radio" name="PC${area.num}" value="OK" />
-              <span>OK</span>
-            </label>
-            <label class="pill-option tone-warn">
-              <input type="radio" name="PC${area.num}" value="PreEx" />
-              <span>Pre-Ex</span>
-            </label>
-            <label class="pill-option tone-na">
-              <input type="radio" name="PC${area.num}" value="NA" />
-              <span>NA</span>
-            </label>
-          </div>
-        </div>
-        <div class="grid-2">
-          <div class="field">
-            <label>MGMT PRE-CHECK NOTE / PHOTO #</label>
-            <textarea id="PC${area.num}_Note" placeholder="管理员备注或关联照片编号（可留空）"></textarea>
-          </div>
-          <div class="field">
-            <label>RESIDENT COMMENTS / EXCEPTIONS <span class="sub">留空 = 同意</span></label>
-            <textarea id="RC${area.num}_Resident_Comments" placeholder="Leave blank if agreed"></textarea>
-          </div>
-        </div>
-        <div class="area-card-actions">
-          <span class="status-summary" id="areaPhotoTag_${area.num}"></span>
-          <button type="button" class="mini-btn" data-snap-area="${area.num} ${area.name}">
-            📷 为该区域拍照
-          </button>
-        </div>
-      </div>
-    `).join('');
-  }
-
   function renderKeysSection() {
     const wrap = $('keysContainer');
     wrap.innerHTML = KEY_ITEMS.map((k) => `
@@ -292,7 +238,7 @@
     const grid = $('photoGrid');
     grid.innerHTML = photos.map((p, idx) => {
       const num = idx + 1;
-      const pageLabel = num <= 6 ? 'P5' : 'P6';
+      const pageLabel = num <= 6 ? 'P3' : 'P4';
       const opts = AREA_OPTIONS.map((opt) =>
         `<option value="${escapeHtml(opt)}" ${p.area === opt ? 'selected' : ''}>${opt || '-- 选择区域 Area --'}</option>`
       ).join('');
@@ -324,33 +270,8 @@
   function updatePhotoCounts() {
     const count = photos.filter((p) => p.dataUrl).length;
     $('photoNavCount').textContent = `(${count})`;
-    $('photoHeaderBadge').textContent = `${count} / 12 张 · Pages 5–6`;
+    $('photoHeaderBadge').textContent = `${count} / 12 张 · Pages 3–4`;
     $('totalMgmtPhotosDisplay').value = String(count);
-
-    // Update per-area photo badges on Step 3
-    ROOM_AREAS.forEach((area) => {
-      const label = `${area.num} ${area.name}`;
-      const matched = photos
-        .map((p, i) => (p.dataUrl && p.area === label ? `#${i + 1}` : null))
-        .filter(Boolean);
-      const tagEl = $(`areaPhotoTag_${area.num}`);
-      if (tagEl) {
-        tagEl.textContent = matched.length ? `已拍照片: Photo ${matched.join(', ')}` : '';
-      }
-    });
-  }
-
-  function updateAreasSummary() {
-    let filled = 0;
-    let preEx = 0;
-    ROOM_AREAS.forEach((a) => {
-      const checked = document.querySelector(`input[name="PC${a.num}"]:checked`);
-      if (checked) {
-        filled++;
-        if (checked.value === 'PreEx') preEx++;
-      }
-    });
-    $('areasSummary').textContent = `已填 ${filled} / 14 区域${preEx ? ` · ${preEx} 项 Pre-Ex` : ''}`;
   }
 
   // ==================== Photo Compression ====================
@@ -359,7 +280,6 @@
     const maxDim = settings.photoMaxDim;
     const quality = settings.photoQuality;
 
-    // createImageBitmap automatically respects EXIF orientation on modern iOS Safari & Android Chrome
     let source = null;
     let w = 0;
     let h = 0;
@@ -413,7 +333,7 @@
     return photos.findIndex((p) => !p.dataUrl);
   }
 
-  async function handleFilesSelected(fileList, explicitSlotIndex = null, presetArea = '') {
+  async function handleFilesSelected(fileList, explicitSlotIndex = null) {
     const files = Array.from(fileList || []).filter((f) => f.type.startsWith('image/') || /\.(jpe?g|png|heic|webp)$/i.test(f.name));
     if (!files.length) return;
 
@@ -429,9 +349,6 @@
       try {
         const dataUrl = await compressImageFile(files[i]);
         photos[slotIdx].dataUrl = dataUrl;
-        if (presetArea) {
-          photos[slotIdx].area = presetArea;
-        }
         if (!photos[slotIdx].caption) {
           photos[slotIdx].caption = stamp;
         }
@@ -538,7 +455,6 @@
 
     function exportTrimmedPng() {
       if (!hasInk || strokes.length === 0) return '';
-      // Render strokes onto a crisp fixed high-res canvas & crop tight bounds
       const W = 600;
       const H = 180;
       let minX = W, minY = H, maxX = 0, maxY = 0;
@@ -590,7 +506,6 @@
     sigPads.Res3 = createSignaturePad('Res3', 'canvasRes3', 'hintRes3');
     sigPads.Mgmt = createSignaturePad('Mgmt', 'canvasMgmt', 'hintMgmt');
 
-    // Mode switchers (draw vs type)
     document.querySelectorAll('.sig-card').forEach((card) => {
       const buttons = card.querySelectorAll('[data-sig-mode]');
       const drawArea = card.querySelector('.sig-draw-area');
@@ -626,7 +541,7 @@
 
   // ==================== Stepper ====================
   function goToStep(stepIndex) {
-    currentStep = Math.max(0, Math.min(4, stepIndex));
+    currentStep = Math.max(0, Math.min(MAX_STEP, stepIndex));
     document.querySelectorAll('.step-panel').forEach((p) => {
       p.classList.toggle('active', Number(p.dataset.step) === currentStep);
     });
@@ -634,10 +549,10 @@
       t.classList.toggle('active', Number(t.dataset.step) === currentStep);
     });
     $('btnPrevStep').disabled = currentStep === 0;
-    $('btnNextStep').textContent = currentStep === 4 ? '完成 · 请在上方提交 ↑' : '下一步 →';
-    $('btnNextStep').disabled = currentStep === 4;
+    $('btnNextStep').textContent = currentStep === MAX_STEP ? '完成 · 请在上方提交 ↑' : '下一步 →';
+    $('btnNextStep').disabled = currentStep === MAX_STEP;
 
-    if (currentStep === 4) {
+    if (currentStep === MAX_STEP) {
       syncAutoFieldsForSignStep();
       requestAnimationFrame(() => {
         Object.values(sigPads).forEach((p) => p.resize());
@@ -701,15 +616,6 @@
       };
     });
 
-    const areas = {};
-    ROOM_AREAS.forEach((area) => {
-      areas[area.num] = {
-        status: getRadioValue(`PC${area.num}`),
-        mgmtNote: $(`PC${area.num}_Note`).value.trim(),
-        residentComments: $(`RC${area.num}_Resident_Comments`).value.trim()
-      };
-    });
-
     const keys = {};
     KEY_ITEMS.forEach((k) => {
       keys[k.id] = {
@@ -747,11 +653,10 @@
       otherAdultResidents: $('otherAdultResidents').value.trim(),
       cleanliness,
       security,
-      areas,
       keys,
       handoffAdditionalNotes: $('handoffAdditionalNotes').value.trim(),
       submissionEmail: $('submissionEmail').value.trim(),
-      eSignConsent: $('eSignConsent').checked,
+      noticeEmailDesignation: $('noticeEmailDesignation').checked,
       residentInitials: $('residentInitials').value.trim().toUpperCase(),
       photosTakenDate: $('photosTakenDate').value.trim(),
       photosTakenBy: $('photosTakenBy').value.trim(),
@@ -788,20 +693,15 @@
     SECURITY_ITEMS.forEach((s) => {
       if (data.security[s.id].status === 'Issue') flags.push(`${s.id}:Issue`);
     });
-    ROOM_AREAS.forEach((a) => {
-      if (data.areas[a.num].status === 'PreEx') flags.push(`Area${a.num}:PreEx`);
-    });
-    return flags.length ? flags.join(', ') : 'All OK / None Noted';
+    return flags.length ? flags.join(', ') : 'All OK / See Photos';
   }
 
-  // ==================== Draft Auto-Save (Text/Radios) ====================
+  // ==================== Draft Auto-Save ====================
   function saveDraft() {
     try {
       const snapshot = collectFormData();
-      // Exclude binary photos & drawn signatures to keep localStorage tiny and fast
       delete snapshot.photos;
       delete snapshot.signatures;
-      snapshot.photoMeta = photos.map((p) => ({ area: p.area, caption: p.caption }));
       snapshot.res1PrintedName = $('res1PrintedName').value;
       snapshot.res2PrintedName = $('res2PrintedName').value;
       snapshot.res3PrintedName = $('res3PrintedName').value;
@@ -846,14 +746,6 @@
         $(`${item.id}_Date_Note`).value = s.dateNote || '';
       });
     }
-    if (d.areas) {
-      ROOM_AREAS.forEach((a) => {
-        const ar = d.areas[a.num] || {};
-        setRadioValue(`PC${a.num}`, ar.status);
-        $(`PC${a.num}_Note`).value = ar.mgmtNote || '';
-        $(`RC${a.num}_Resident_Comments`).value = ar.residentComments || '';
-      });
-    }
     if (d.keys) {
       KEY_ITEMS.forEach((k) => {
         const kv = d.keys[k.id] || {};
@@ -863,7 +755,7 @@
     }
     $('handoffAdditionalNotes').value = d.handoffAdditionalNotes || '';
     if (d.submissionEmail) $('submissionEmail').value = d.submissionEmail;
-    $('eSignConsent').checked = !!d.eSignConsent;
+    $('noticeEmailDesignation').checked = !!d.noticeEmailDesignation;
     $('residentInitials').value = d.residentInitials || '';
     if (d.photosTakenDate) $('photosTakenDate').value = d.photosTakenDate;
     if (d.photosTakenBy) $('photosTakenBy').value = d.photosTakenBy;
@@ -873,7 +765,6 @@
     if (d.mgmtStaffName) $('mgmtStaffName').value = d.mgmtStaffName;
     if (d.mgmtPhotoSetRef) $('mgmtPhotoSetRef').value = d.mgmtPhotoSetRef;
 
-    updateAreasSummary();
     return true;
   }
 
@@ -903,7 +794,7 @@
   // ==================== PDF Generation & Google Drive Upload ====================
   async function loadTemplateBytes() {
     if (templatePdfCache) return templatePdfCache;
-    const res = await fetch('./template.pdf');
+    const res = await fetch('./template.pdf?v=2');
     if (!res.ok) {
       throw new Error(`无法加载模板 PDF (HTTP ${res.status})，请确认使用 HTTP(S) 服务访问网页`);
     }
@@ -946,13 +837,13 @@
     if (!data.property) missing.push('物业 Property (EV1 / EV2)');
     if (!data.unit) missing.push('房号 Unit #');
     if (!data.resident1FullName) missing.push('主租客姓名 Primary Resident Name');
-    if (!data.eSignConsent) missing.push('勾选电子签名同意框 (Electronic Signature Consent)');
+    if (!data.noticeEmailDesignation) missing.push('勾选通知邮箱指定确认框 (Designate Page 1 Email for Notices)');
     return missing;
   }
 
   async function handlePreviewPdf() {
     try {
-      setLoading(true, '正在生成 6 页原版 PDF...', '嵌入照片与电子签名中');
+      setLoading(true, '正在生成新版 5 页 PDF...', '嵌入现场照片与手写签名中');
       const { pdfBytes, fileName } = await generateFilledPdf();
       setLoading(false);
       downloadPdfBytes(pdfBytes, fileName);
@@ -983,7 +874,7 @@
     }
 
     try {
-      setLoading(true, '第 1/2 步：正在生成 6 页原版 PDF...', '嵌入现场照片与电子签名');
+      setLoading(true, '第 1/2 步：正在生成新版 5 页 PDF...', '嵌入现场照片与手写签名');
       const { pdfBytes, fileName } = await generateFilledPdf();
       const pdfSizeMb = (pdfBytes.length / (1024 * 1024)).toFixed(2);
 
@@ -1009,7 +900,6 @@
         }
       };
 
-      // Use text/plain to make it a CORS simple request (Google Apps Script does not reply to OPTIONS preflight)
       const response = await fetch(settings.gasUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -1055,7 +945,7 @@
         <div class="result-card err">
           <div style="font-weight:800;margin-bottom:4px;">❌ 上传 Google Drive 失败</div>
           <div>${escapeHtml(err.message)}</div>
-          <div style="margin-top:6px;font-size:12.5px;">您仍可点击「生成并预览/下载 PDF」先保存文件到手机本地，数据不会丢失。</div>
+          <div style="margin-top:6px;font-size:12.5px;">您仍可点击「生成并预览/下载 5 页 PDF」先保存文件到手机本地，数据不会丢失。</div>
         </div>
       `;
     }
@@ -1106,21 +996,27 @@
 
   // ==================== Event Bindings ====================
   function bindEvents() {
-    // Top step tabs & bottom buttons
     document.querySelectorAll('.step-tab').forEach((tab) => {
       tab.addEventListener('click', () => goToStep(Number(tab.dataset.step)));
     });
     $('btnPrevStep').addEventListener('click', () => goToStep(currentStep - 1));
     $('btnNextStep').addEventListener('click', () => goToStep(currentStep + 1));
 
-    // Floor plan Other toggle
     document.querySelectorAll('input[name="floorPlan"]').forEach((r) => {
       r.addEventListener('change', () => {
         $('floorPlanOtherWrap').classList.toggle('hidden', r.value !== 'Other' || !r.checked);
       });
     });
 
-    // Key handoff datetime picker auto-formats text + calculates +36 hours
+    function getBaseHandoffDate() {
+      const pickerVal = $('keyHandoffPicker').value;
+      if (pickerVal) {
+        const dt = new Date(pickerVal);
+        if (!isNaN(dt.getTime())) return dt;
+      }
+      return new Date();
+    }
+
     $('keyHandoffPicker').addEventListener('change', (e) => {
       if (!e.target.value) return;
       const dt = new Date(e.target.value);
@@ -1132,7 +1028,17 @@
       saveDraft();
     });
 
-    // Quick fill buttons
+    document.querySelectorAll('[data-deadline-hours]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const hrs = Number(btn.dataset.deadlineHours);
+        const base = getBaseHandoffDate();
+        const dl = new Date(base.getTime() + hrs * 60 * 60 * 1000);
+        $('supplementDeadlineDateTime').value = formatUSDateTime(dl);
+        saveDraft();
+        showToast(`已将截止时间设为交房后 +${hrs} 小时`);
+      });
+    });
+
     $('btnAllCleanOk').addEventListener('click', () => {
       CLEANLINESS_ITEMS.forEach((c) => setRadioValue(`PC_${c.id}`, 'OK'));
       saveDraft();
@@ -1150,52 +1056,12 @@
       showToast('已将全部烟感与安防项设为 Working');
     });
 
-    $('btnFillRemainingOk').addEventListener('click', () => {
-      let count = 0;
-      ROOM_AREAS.forEach((a) => {
-        if (!getRadioValue(`PC${a.num}`)) {
-          setRadioValue(`PC${a.num}`, 'OK');
-          count++;
-        }
-      });
-      updateAreasSummary();
-      saveDraft();
-      showToast(count ? `已将 ${count} 个未填区域设为 OK` : '所有 14 个区域均已选择状态');
-    });
-
-    $('btnMark2BNA').addEventListener('click', () => {
-      setRadioValue('PC09', 'NA');
-      updateAreasSummary();
-      saveDraft();
-      showToast('已将 09 Bedroom 3 / office 标为 NA');
-    });
-
-    // Area radio change -> summary update & area camera button
-    $('areasContainer').addEventListener('change', (e) => {
-      if (e.target.type === 'radio') updateAreasSummary();
-    });
-
-    $('areasContainer').addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-snap-area]');
-      if (!btn) return;
-      if (findNextFreePhotoSlot() === -1) {
-        showToast('12 张照片位已满，请前往「照片」页管理');
-        return;
-      }
-      pendingPhotoTargetSlot = null;
-      pendingPhotoPresetArea = btn.dataset.snapArea;
-      $('cameraInput').value = '';
-      $('cameraInput').click();
-    });
-
-    // Photo capture & gallery inputs
     $('btnTakePhoto').addEventListener('click', () => {
       if (findNextFreePhotoSlot() === -1) {
         showToast('12 张照片位已满，可点击单张照片替换或删除');
         return;
       }
       pendingPhotoTargetSlot = null;
-      pendingPhotoPresetArea = '';
       $('cameraInput').value = '';
       $('cameraInput').click();
     });
@@ -1206,24 +1072,22 @@
         return;
       }
       pendingPhotoTargetSlot = null;
-      pendingPhotoPresetArea = '';
       $('galleryInput').value = '';
       $('galleryInput').click();
     });
 
     $('cameraInput').addEventListener('change', (e) => {
-      handleFilesSelected(e.target.files, pendingPhotoTargetSlot, pendingPhotoPresetArea);
+      handleFilesSelected(e.target.files, pendingPhotoTargetSlot);
     });
 
     $('galleryInput').addEventListener('change', (e) => {
-      handleFilesSelected(e.target.files, null, '');
+      handleFilesSelected(e.target.files, null);
     });
 
     $('slotFileInput').addEventListener('change', (e) => {
-      handleFilesSelected(e.target.files, pendingPhotoTargetSlot, '');
+      handleFilesSelected(e.target.files, pendingPhotoTargetSlot);
     });
 
-    // Photo grid delegation
     $('photoGrid').addEventListener('click', (e) => {
       const rmBtn = e.target.closest('[data-remove-photo]');
       if (rmBtn) {
@@ -1244,7 +1108,6 @@
     $('photoGrid').addEventListener('change', (e) => {
       if (e.target.dataset.photoArea !== undefined) {
         photos[Number(e.target.dataset.photoArea)].area = e.target.value;
-        updatePhotoCounts();
       }
       if (e.target.dataset.photoCaption !== undefined) {
         photos[Number(e.target.dataset.photoCaption)].caption = e.target.value;
@@ -1257,7 +1120,6 @@
       }
     });
 
-    // Resident 3 toggle
     $('btnToggleRes3').addEventListener('click', () => {
       const card = $('cardRes3');
       const willShow = card.classList.contains('hidden');
@@ -1269,25 +1131,21 @@
       }
     });
 
-    // Auto-save draft on any form input change
     document.querySelector('main').addEventListener('change', saveDraft);
     document.querySelector('main').addEventListener('input', () => {
       clearTimeout(bindEvents._saveT);
       bindEvents._saveT = setTimeout(saveDraft, 400);
     });
 
-    // Submit & Preview
     $('btnPreviewPdf').addEventListener('click', handlePreviewPdf);
     $('btnSubmitDrive').addEventListener('click', handleSubmitToDrive);
 
-    // Reset form
     $('btnResetForm').addEventListener('click', () => {
       if (!confirm('确定清空当前所有表单内容、照片和签名，开始检查下一个房间吗？')) return;
       localStorage.removeItem(STORAGE_DRAFT_KEY);
       window.location.reload();
     });
 
-    // Settings Modal
     $('btnOpenSettings').addEventListener('click', openSettingsModal);
     $('btnCloseSettings').addEventListener('click', closeSettingsModal);
     $('btnCancelSettings').addEventListener('click', closeSettingsModal);
@@ -1305,11 +1163,9 @@
     });
   }
 
-  // ==================== Init ====================
   function init() {
     renderCleanlinessSection();
     renderSecuritySection();
-    renderAreasSection();
     renderKeysSection();
     renderPhotoGrid();
     initSignaturePads();
@@ -1317,7 +1173,6 @@
 
     const hadDraft = restoreDraft();
     applySmartDefaults();
-    updateAreasSummary();
     if (hadDraft) {
       showToast('已自动恢复上次未完成的文字草稿', 2200);
     }
